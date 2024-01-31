@@ -1,0 +1,12 @@
+{
+	"Name": "Harsh",
+	"Age": 20,
+	"Contact": "9876543210",
+	"Company": "Myrl Tech",
+	"Address": {
+		"City": "Patna",
+		"State": "Bihar",
+		"Country": "india",
+		"Pinconde": 810013
+	}
+}

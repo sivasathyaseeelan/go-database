@@ -1,0 +1,12 @@
+{
+	"Name": "Dev",
+	"Age": 21,
+	"Contact": "8974561230",
+	"Company": "Textr.ai",
+	"Address": {
+		"City": "Hyderabad",
+		"State": "Telangana",
+		"Country": "india",
+		"Pinconde": 422258
+	}
+}
