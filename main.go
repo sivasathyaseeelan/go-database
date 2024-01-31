@@ -91,10 +91,62 @@ func (d *Driver) Write(collection, resource string, v interface{}) error {
 	b = append(b, byte('\n'))
 
 	if err := ioutil.WriteFile(tmpPath, b, 0644); err != nil {
-		return nil
+		return err
 	}
 
 	return os.Rename(tmpPath, fnlPath)
+}
+
+func (d *Driver) Read(collection, resource string, v interface{}) error {
+	if collection == "" {
+		return fmt.Errorf("Missing collection - no place to save record")
+	}
+
+	if resource == "" {
+		return fmt.Errorf("Missing resource - unable to save record(no name)")
+	}
+
+	record := filepath.Join(d.dir, collection, resource)
+
+	if _, err := stat(record); err != nil {
+		return err
+	}
+
+	b, err := ioutil.ReadFile(record + ".json")
+
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(b, &v)
+}
+
+func (d *Driver) ReadAll(collection string) ([]string, error) {
+	if collection == "" {
+		return nil, fmt.Errorf("Missing collection - no place to save record")
+	}
+
+	dir := filepath.Join(d.dir, collection)
+
+	if _, err := stat(dir); err != nil {
+		return nil, err
+	}
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []string
+
+	for _, file := range files {
+		b, err := ioutil.ReadFile(filepath.Join(dir, file.Name()))
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, string(b))
+	}
+	return records, nil
 }
 
 func (d *Driver) getOrCreateMutex(collection string) *sync.Mutex {
@@ -108,6 +160,13 @@ func (d *Driver) getOrCreateMutex(collection string) *sync.Mutex {
 	}
 
 	return m
+}
+
+func stat(path string) (fi os.FileInfo, err error) {
+	if fi, err = os.Stat(path); os.IsNotExist(err) {
+		fi, err = os.Stat(path + ".json")
+	}
+	return
 }
 
 type Address struct {
@@ -128,12 +187,14 @@ type User struct {
 func main() {
 	dir := "./"
 
+	println("Connecting to database ...")
+
 	db, err := New(dir, nil)
 	if err != nil {
 		fmt.Println("Error", err)
 	}
 
-	println(db)
+	println("Connected to database successfullly!")
 
 	employees := []User{
 		{"Harsh", "20", "9876543210", "Myrl Tech", Address{"Patna", "Bihar", "india", "810013"}},
@@ -149,4 +210,29 @@ func main() {
 			Address: value.Address,
 		})
 	}
+
+	var user User
+	err = db.Read("users", "Harsh", &user)
+	if err != nil {
+		fmt.Println("Error reading user Harsh:", err)
+	} else {
+		fmt.Printf(":%+v\n", user)
+	}
+
+	records, err := db.ReadAll("users")
+	if err != nil {
+		fmt.Println("Error", err)
+	}
+	fmt.Println(records)
+
+	allusers := []User{}
+
+	for _, f := range records {
+		employeeFound := User{}
+		if err := json.Unmarshal([]byte(f), &employeeFound); err != nil {
+			fmt.Println("Error", err)
+		}
+		allusers = append(allusers, employeeFound)
+	}
+	fmt.Println((allusers))
 }
